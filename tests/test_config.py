@@ -2,8 +2,11 @@
 
 from pathlib import Path
 
+import pytest
+
 from janus_sec.config import (
     Config,
+    ConfigError,
     IgnoreEntry,
     default_config_path,
     filter_ignored,
@@ -92,6 +95,59 @@ group = "staff"
     config = load_config(config_path)
 
     assert config.allowlist[0].action == "suppress"
+
+
+def test_invalid_toml_raises_config_error_naming_the_file(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[[ignore]]
+path =
+"""
+    )
+
+    with pytest.raises(ConfigError) as excinfo:
+        load_config(config_path)
+
+    message = str(excinfo.value)
+    assert "invalid TOML" in message
+    assert str(config_path) in message
+
+
+def test_ignore_entry_missing_required_key_raises_clear_error(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[[ignore]]
+check_type = "group_readable"
+"""
+    )
+
+    with pytest.raises(ConfigError) as excinfo:
+        load_config(config_path)
+
+    message = str(excinfo.value)
+    assert str(config_path) in message
+    assert "[[ignore]] entry 1" in message
+    assert "'path'" in message
+
+
+def test_allowlist_entry_missing_required_key_raises_clear_error(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[[allowlist]]
+action = "suppress"
+"""
+    )
+
+    with pytest.raises(ConfigError) as excinfo:
+        load_config(config_path)
+
+    message = str(excinfo.value)
+    assert str(config_path) in message
+    assert "[[allowlist]] entry 1" in message
+    assert "'group'" in message
 
 
 def test_is_ignored_matches_path_and_check_type() -> None:
