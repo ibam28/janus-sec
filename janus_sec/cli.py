@@ -10,6 +10,7 @@ import argparse
 import json
 import sys
 
+from janus_sec.config import ConfigError
 from janus_sec.models import RiskLevel
 from janus_sec.scanner import ScanResult, scan
 from janus_sec.audit import append_entry
@@ -279,7 +280,14 @@ def main() -> int:
         argv = ["scan"]
 
     args = parser.parse_args(argv)
-    return args.func(args)
+
+    try:
+        return args.func(args)
+    except ConfigError as exc:
+        # load_config() already raises a clear, specific message - just
+        # surface it directly instead of letting it become a traceback.
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

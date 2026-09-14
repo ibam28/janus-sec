@@ -128,6 +128,25 @@ def test_ci_flag_exits_zero_with_no_findings_at_all(monkeypatch) -> None:
     assert exit_code == 0
 
 
+def test_config_error_prints_clean_message_not_traceback(monkeypatch, capsys) -> None:
+    import sys
+    from janus_sec.config import ConfigError
+
+    def _raise_config_error():
+        raise ConfigError("/home/ezio/.config/janus-sec/config.toml: boom")
+
+    monkeypatch.setattr("janus_sec.cli.scan", _raise_config_error)
+    monkeypatch.setattr(sys, "argv", ["janus-sec", "scan"])
+
+    exit_code = main()
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert captured.err.strip() == (
+        "error: /home/ezio/.config/janus-sec/config.toml: boom"
+    )
+
+
 def _fake_findings_for_fix() -> list:
     return [_fake_finding()]
 
